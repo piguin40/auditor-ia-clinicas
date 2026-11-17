@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auditor de posicionamiento · Vertical AI</title>
+<style>
+:root{
+  --bg:#f6f5f1;--card:#fff;--ink:#1c1d21;--muted:#666a73;--line:#e3e1da;--accent:#0f5c63;--accent-ink:#fff;
+  --ok:#1b7a43;--ok-bg:#e4f4ea;--mid:#96650a;--mid-bg:#fbf0d6;--bad:#b3261e;--bad-bg:#fbe6e4;--code:#f1efe8;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#15171a;--card:#1e2125;--ink:#ecebe7;--muted:#9a9fa8;--line:#31353b;--accent:#58bfc7;--accent-ink:#0b2224;
+  --ok:#6fd398;--ok-bg:#173524;--mid:#eabf62;--mid-bg:#3a2e12;--bad:#f2938c;--bad-bg:#401b18;--code:#16181b;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+main{max-width:920px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:28px;line-height:1.2;margin:0 0 6px;letter-spacing:-.01em}
+h2{font-size:23px;margin:0 0 4px;letter-spacing:-.01em}
+h3{font-size:17px;margin:28px 0 10px}
+h4{font-size:13px;margin:18px 0 6px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.sub{color:var(--muted);margin:0 0 24px;max-width:64ch}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px}
+form{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:4px}
+input,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px}
+.full{grid-column:1/-1}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600;padding:11px 20px}
+button:disabled{opacity:.6;cursor:wait}
+.error{background:var(--bad-bg);color:var(--bad);padding:12px 16px;border-radius:8px;margin-top:16px}
+.aviso{background:var(--mid-bg);color:var(--mid);padding:12px 16px;border-radius:8px;margin:12px 0;font-size:14.5px}
+.cab{margin-top:28px}
+.cab .meta{margin-top:2px}
+.via{margin-top:44px;padding-top:28px;border-top:3px solid var(--accent)}
+.via .n{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
+.pos{display:grid;grid-template-columns:1fr;gap:16px;margin-top:16px}
+.grande{font-size:22px;font-weight:700;line-height:1.25;margin-top:4px}
+.tres{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.num{font-size:44px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap}
+.num small{font-size:16px;color:var(--muted);font-weight:500}
+.top b{display:block;overflow-wrap:anywhere;margin-top:6px}.dato{font-size:14.5px;margin-top:8px}
+tr.yo td{background:color-mix(in srgb,var(--accent) 10%,transparent)}td.cuanto{width:34%;white-space:nowrap}
+.diag{margin-top:16px}.diag p{margin:6px 0 0}.veces{font-weight:600}
+.num small{white-space:normal}
+.barra{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:10px}
+.barra i{display:block;height:100%;border-radius:4px}
+.meta{color:var(--muted);font-size:14px;overflow-wrap:anywhere}
+.meta a,td a{color:var(--accent)}
+.etq{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.prueba{display:grid;grid-template-columns:auto 1fr auto;gap:4px 14px;padding:14px 0;border-top:1px solid var(--line)}
+.prueba:first-child{border-top:0}
+.pill{font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap;align-self:start;margin-top:2px;display:inline-block}
+.ok{background:var(--ok-bg);color:var(--ok)}.parcial{background:var(--mid-bg);color:var(--mid)}.falta{background:var(--bad-bg);color:var(--bad)}
+.prueba b{font-weight:600}
+.prueba .pts{color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.prueba p,.tiene{grid-column:2/-1;margin:0;font-size:14.5px;color:var(--muted);overflow-wrap:anywhere}
+.tiene{font-size:13px;font-weight:600}.tiene.todas{color:var(--bad)}
+.plan ol{margin:0;padding-left:22px}
+.plan li{margin-bottom:10px}
+.plan li span{display:block;color:var(--muted);font-size:14.5px}
+.plan li em{font-style:normal;font-weight:600;color:var(--ink)}
+.plan li .como{margin-top:4px;padding-left:10px;border-left:2px solid var(--accent)}
+.nombradas{margin:0;padding-left:22px}
+.nombradas li{margin-bottom:8px}
+.nombradas li.yo b{color:var(--ok)}
+.nombradas span{display:block;color:var(--muted);font-size:14.5px}
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+th,td{text-align:left;padding:8px 10px 8px 0;border-top:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}
+thead th{border-top:0;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+details{border-top:1px solid var(--line);padding:12px 0}
+details:first-of-type{border-top:0}
+summary{cursor:pointer;font-weight:600}
+pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:12px;overflow:auto;font:12.5px/1.5 ui-monospace,Menlo,monospace;max-height:340px;margin:8px 0}
+.acciones{display:flex;gap:10px;margin-top:24px;flex-wrap:wrap}
+.pie{color:var(--muted);font-size:13.5px;margin-top:28px}
+@media (max-width:640px){form,.pos,.tres{grid-template-columns:1fr}}
+@media print{
+  body{background:#fff;font-size:12.5px}main{padding:0;max-width:none}
+  #formulario,.acciones,.sub,.copiar{display:none}
+  .card{border:1px solid #ccc;break-inside:avoid}.via{break-before:page;margin-top:0}
+  pre{max-height:none;white-space:pre-wrap}.prueba,.plan li{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>Auditor de posicionamiento</h1>
+  <p class="sub">Pon tu web, la ciudad y el tratamiento. La herramienta comprueba por dos vías separadas cómo sales: cuando alguien busca en Google y cuando alguien se lo pregunta a una IA. En cada una te dice quién sale primero, qué te falta y qué te recomendamos hacer.</p>
+
+  <div class="card" id="formulario">
+    <form id="f">
+      <div class="full"><label for="url">Web de la clínica</label><input id="url" required placeholder="www.miclinica.es" autocomplete="off"></div>
+      <div><label for="ciudad">Ciudad</label><input id="ciudad" required placeholder="Madrid"></div>
+      <div><label for="trat">Tratamiento o servicio</label><input id="trat" required placeholder="implantes dentales"></div>
+      <div><label for="negocio">Tipo de negocio</label><select id="negocio"><option value="clínica dental">Clínica dental</option><option value="laboratorio dental">Laboratorio dental</option></select></div>
+      <div><label for="modo">Qué quieres comprobar</label><select id="modo"><option value="ambos">Google e IA</option><option value="google">Solo Google</option><option value="ia">Solo IA</option></select></div>
+      <div class="full" id="cajaClave" hidden><label for="clave">Contraseña del curso</label><input id="clave" type="password" autocomplete="off"></div>
+      <div class="full"><button class="primary" id="btn">Buscar y comparar</button></div>
+    </form>
+    <div id="fuentes" class="meta" style="margin-top:12px"></div>
+    <div id="msg"></div>
+  </div>
+
+  <div id="out"></div>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const el = (tag, attrs = {}, ...hijos) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) k === "class" ? n.className = v : n.setAttribute(k, v);
+  for (const h of hijos) if (h !== null && h !== undefined && h !== "") n.append(h);
+  return n;
+};
+const ETQ = {ok: "Correcto", parcial: "A medias", falta: "Falta"};
+const color = n => n >= 75 ? "var(--ok)" : n >= 45 ? "var(--mid)" : "var(--bad)";
+
+function nota(valor, clase) {
+  const num = el("div", {class: "num"}, String(valor), el("small", {}, " / 100"));
+  num.style.color = color(valor);
+  const i = el("i"); i.style.width = valor + "%"; i.style.background = color(valor);
+  return [num, el("div", {class: "barra"}, i)];
+}
+
+function filaPrueba(p, n) {
+  const fila = el("div", {class: "prueba"},
+    el("span", {class: "pill " + p.estado}, ETQ[p.estado]),
+    el("b", {}, p.nombre),
+    el("span", {class: "pts"}, ""));
+  if (n) fila.append(el("span", {class: "tiene" + (p.estado !== "ok" && p.top.length === n ? " todas" : "")},
+    p.top.length ? `Lo tienen ${p.top.length} de las ${n} primeras: ${p.top.join(", ")}` : `No lo tiene ninguna de las ${n} primeras: este análisis no demuestra que ayude`));
+  fila.append(el("p", {}, p.detalle));
+  return fila;
+}
+
+function pintarVia(v, idx, r) {
+  const s = el("section", {class: "via"});
+  s.append(el("div", {class: "n"}, `Vía ${idx}`), el("h2", {}, v.titulo));
+  s.append(el("p", {class: "meta"}, (v.real ? "Consulta real a " : "Consulta hecha en ") + v.motor + ": " + v.consultas.map(c => `«${c}»`).join(", ") + "."));
+  if (v.aviso) s.append(el("div", {class: "aviso"}, v.aviso));
+
+  const pos = el("div", {class: "pos"});
+  const pct = v.total ? Math.round(100 * v.veces / v.total) : 0;
+  const vis = el("div", {class: "num"}, v.total ? `${v.veces} de ${v.total}` : "Sin datos", el("small", {}, v.total ? ` ${v.unidad} · ${pct} %` : ""));
+  vis.style.color = !v.total || !v.veces ? "var(--bad)" : v.veces === v.total ? "var(--ok)" : "var(--mid)";
+  const c1 = el("div", {class: "card"}, el("div", {class: "etq"}, "Tu visibilidad real"), vis, el("div", {class: "meta", style: "margin-top:10px"}, v.posicion));
+  pos.append(c1); s.append(pos);
+  if (v.diagnostico) s.append(el("div", {class: "card diag"}, el("div", {class: "etq"}, "Diagnóstico"), el("p", {}, v.diagnostico)));
+  if (v.consejo && v.consejo.diagnostico) s.append(el("div", {class: "card diag"}, el("div", {class: "etq"}, "Lo que opina ChatGPT de tu clínica (texto suyo; puede contener errores)"), el("p", {}, v.consejo.diagnostico)));
+
+  if (v.nombradas.length) {
+    s.append(el("h3", {}, v.titulo.includes("IA") ? "Ranking real: a quién recomienda la IA" : "Ranking real: quién sale en Google"));
+    const tb = el("tbody");
+    v.nombradas.forEach(x => {
+      const pc = v.total ? Math.round(100 * x.veces / v.total) : 0;
+      const bar = el("i"); bar.style.width = pc + "%"; bar.style.background = x.yo ? "var(--accent)" : "var(--muted)";
+      tb.append(el("tr", {class: x.yo ? "yo" : ""},
+        el("td", {}, el("b", {}, x.nombre + (x.yo ? " (tu clínica)" : "")), el("div", {class: "meta"}, x.motivo)),
+        el("td", {class: "cuanto"}, el("b", {}, `${x.veces} de ${v.total}`), ` · ${pc} %`, el("div", {class: "barra"}, bar))));
+    });
+    s.append(el("div", {class: "card"}, el("table", {}, el("thead", {}, el("tr", {}, el("th", {}, "Clínica"), el("th", {}, `${v.unidad} en las que sale`))), tb)));
+  }
+
+  if (v.pruebas_reales && v.pruebas_reales.length) {
+    const d = el("details", {class: "card", style: "margin-top:16px;border:1px solid var(--line)"},
+      el("summary", {}, `De dónde sale el porcentaje: las ${v.pruebas_reales.length} ${v.unidad} tal cual`));
+    d.append(el("p", {class: "meta"}, `El porcentaje es una cuenta: en cuántas de estas ${v.pruebas_reales.length} ${v.unidad} aparece cada clínica. Puedes repetir cualquiera a mano para comprobarlo.`));
+    v.pruebas_reales.forEach((p, i) => {
+      d.append(el("h4", {}, `${i + 1}. ${p.motor}: «${p.pregunta}»`));
+      const ol = el("ol", {class: "nombradas"});
+      p.lista.forEach(x => ol.append(el("li", {class: x.yo ? "yo" : ""}, el("b", {}, x.nombre + (x.yo ? " (tu clínica)" : "")))));
+      d.append(ol);
+      if (!p.lista.some(x => x.yo)) d.append(el("p", {class: "meta"}, "Tu clínica no aparece en esta."));
+    });
+    s.append(d);
+  }
+
+  const n = v.n_legibles;
+  if (v.primeras.length) {
+    s.append(el("h3", {}, `Las ${v.primeras.length} que más salen, analizadas`));
+    const g = el("div", {class: "tres"});
+    v.primeras.forEach((t, i) => g.append(el("div", {class: "card top"}, el("div", {class: "etq"}, `Nº ${i + 1}`),
+      el("b", {}, t.nombre), el("div", {class: "meta"}, t.url),
+      el("div", {class: "dato"}, el("strong", {}, `${t.veces} de ${v.total}`), ` ${v.unidad}`),
+      el("div", {class: "dato"}, t.ilegible ? "No se ha podido leer su web (se dibuja con JavaScript); no entra en la comparación" : `A su web le faltan ${t.faltan} de ${v.senales} señales`),
+      el("div", {class: "meta", style: "margin-top:8px"}, t.porque))));
+    s.append(g);
+  }
+
+  const mal = v.pruebas.filter(p => p.estado !== "ok"), bien = v.pruebas.filter(p => p.estado === "ok");
+  s.append(el("h3", {}, v.web_ilegible ? "Tu web no se ha podido leer" : n ? `Lo que te falta frente a ellas (${mal.length})` : `Lo que le falta a tu web (${mal.length})`));
+  const lista = el("div", {class: "card"});
+  mal.forEach(p => lista.append(filaPrueba(p, n)));
+  if (!mal.length) lista.append(el("p", {class: "meta", style: "margin:0"}, v.web_ilegible ? "No se ha podido leer tu web (casi no trae texto en el código), así que no se puede decir qué le falta. Mira la primera recomendación." : "Tu web cumple todas las señales de esta vía."));
+  if (bien.length) {
+    const d = el("details", {style: mal.length ? "margin-top:8px" : "border:0"}, el("summary", {}, `Lo que ya tienes bien (${bien.length})`));
+    bien.forEach(p => d.append(filaPrueba(p, n)));
+    lista.append(d);
+  }
+  s.append(lista);
+
+  s.append(el("h3", {}, "Qué te recomendamos hacer"));
+  const plan = el("div", {class: "card plan"});
+  for (const b of v.plan) {
+    if (!b.items.length) continue;
+    plan.append(el("h4", {}, b.plazo));
+    const ol = el("ol");
+    for (const it of b.items) ol.append(el("li", {}, el("b", {}, it.titulo), el("span", {}, it.texto, it.nota ? el("em", {}, " " + it.nota) : null),
+      it.como ? el("span", {class: "como"}, el("em", {}, r.cms_clave === "otro" ? "Cómo hacerlo: " : `Cómo hacerlo en ${r.cms.split(" ")[0]}: `), it.como) : null));
+    plan.append(ol);
+  }
+  if (plan.querySelector("h4")) plan.querySelector("h4").style.marginTop = "0";
+  s.append(plan);
+
+  if (v.fuentes.length) {
+    s.append(el("h3", {}, v.real ? "Páginas que la IA ha leído para responder" : "Listados que una IA leería"));
+    const tb = el("tbody");
+    for (const f of v.fuentes) {
+      const estado = f.apareces === null ? el("span", {class: "meta"}, "Comprobar a mano")
+        : el("span", {class: "pill " + (f.apareces ? "ok" : "falta")}, f.apareces ? "Apareces" : "No apareces");
+      tb.append(el("tr", {}, el("td", {}, el("a", {href: f.url, target: "_blank", rel: "noopener"}, f.host)),
+        el("td", {}, f.tipo + (f.clinicas ? ` · enlaza a ${f.clinicas} clínicas` : "")), el("td", {}, estado)));
+    }
+    s.append(el("div", {class: "card"}, el("table", {}, el("thead", {}, el("tr", {}, el("th", {}, "Página"), el("th", {}, "Tipo"), el("th", {}, "Tu clínica"))), tb)));
+  }
+  return s;
+}
+
+function pintar(r) {
+  const out = $("#out"); out.textContent = "";
+  out.append(el("div", {class: "cab"}, el("h2", {}, r.nombre),
+    el("div", {class: "meta"}, `${r.url} · «${r.tratamiento}» en ${r.ciudad} · ${new Date().toLocaleDateString("es-ES", {day: "numeric", month: "long", year: "numeric"})}`),
+    el("div", {class: "meta"}, r.pagina_tratamiento ? "Página de tratamiento analizada: " + r.pagina_tratamiento : "No se encontró página propia del tratamiento."),
+    el("div", {class: "meta"}, r.cms ? "Web hecha con: " + r.cms : "No se ha podido identificar con qué está hecha la web.")));
+  for (const a of r.avisos) out.append(el("div", {class: "aviso"}, a));
+  r.canales.forEach((c, i) => out.append(pintarVia(r.vias[c], i + 1, r)));
+
+  const ap = el("section", {class: "via"}, el("div", {class: "n"}, "Anexo"), el("h2", {}, "Textos y código listos para pegar"),
+    el("p", {class: "meta"}, "Sirven para las dos vías. Lo que está en MAYÚSCULAS hay que sustituirlo por datos reales."));
+  const pl = el("div", {class: "card", style: "margin-top:16px"});
+  for (const t of r.plantillas) {
+    const b = el("button", {type: "button", class: "copiar"}, "Copiar");
+    b.onclick = async () => { await navigator.clipboard.writeText(t.codigo); b.textContent = "Copiado"; setTimeout(() => b.textContent = "Copiar", 1500); };
+    pl.append(el("details", {}, el("summary", {}, t.titulo), el("p", {class: "meta"}, t.donde), el("pre", {}, t.codigo), b));
+  }
+  ap.append(pl); out.append(ap);
+
+  const imp = el("button", {type: "button", class: "primary"}, "Guardar informe en PDF");
+  imp.onclick = () => { document.querySelectorAll("details").forEach(d => d.open = true); window.print(); };
+  out.append(el("div", {class: "acciones"}, imp));
+  out.append(el("p", {class: "pie"}, "Los porcentajes son reales: en cuántas de las búsquedas o respuestas hechas ahora mismo sale cada clínica. Las respuestas de una IA cambian de una vez a otra: con 20 preguntas el porcentaje puede moverse unos 15-20 puntos entre análisis, así que solo las diferencias grandes son significativas. Las señales de la web se detectan leyendo el código y el texto de cada página, así que pueden fallar con webs poco habituales; no miden cuántos tratamientos hace una clínica ni su calidad. Ninguna recomendación garantiza una posición."));
+}
+
+const espera = ms => new Promise(r => setTimeout(r, ms));
+const cabeceras = () => ({"X-Clave": $("#clave").value});
+
+fetch("/api/config").then(r => r.json()).then(c => {
+  if (c.clave) { $("#cajaClave").hidden = false; $("#clave").required = true; }
+  const partes = [
+    c.google ? "Google: " + c.google : "Google: no disponible aquí (se usará otro buscador y se avisará)",
+    c.ia ? `IA: ${c.ia}, ${c.preguntas} preguntas por análisis` : "IA: no disponible aquí",
+  ];
+  $("#fuentes").textContent = "Fuentes de este equipo. " + partes.join(" · ");
+}).catch(() => {});
+
+$("#f").addEventListener("submit", async e => {
+  e.preventDefault();
+  const btn = $("#btn"), msg = $("#msg");
+  msg.textContent = ""; $("#out").textContent = "";
+  btn.disabled = true;
+  const t0 = Date.now();
+  const reloj = setInterval(() => { btn.textContent = `Buscando y analizando… ${Math.round((Date.now() - t0) / 1000)} s (suele tardar entre 1 y 4 minutos)`; }, 1000);
+  try {
+    const q = new URLSearchParams({url: $("#url").value, ciudad: $("#ciudad").value, tratamiento: $("#trat").value, negocio: $("#negocio").value, modo: $("#modo").value});
+    const inicio = await (await fetch("/api/audit?" + q, {headers: cabeceras()})).json();
+    if (inicio.error) throw new Error(inicio.error);
+    let r = null;
+    while (!r) {
+      await espera(3000);
+      const e2 = await (await fetch("/api/estado?id=" + inicio.id, {headers: cabeceras()})).json();
+      if (e2.error) throw new Error(e2.error);
+      if (e2.estado === "hecho") r = e2.resultado;
+    }
+    if (r.error) msg.append(el("div", {class: "error"}, r.error));
+    else pintar(r);
+  } catch (err) {
+    msg.append(el("div", {class: "error"}, "No se pudo completar el análisis: " + err.message));
+  } finally {
+    clearInterval(reloj);
+    btn.disabled = false; btn.textContent = "Buscar y comparar";
+  }
+});
+</script>
+</body>
+</html>

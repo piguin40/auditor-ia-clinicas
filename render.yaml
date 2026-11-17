@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: auditor-posicionamiento-clinicas
+    runtime: python
+    buildCommand: "echo sin dependencias"
+    startCommand: "python server.py"
+    healthCheckPath: /api/config
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.4"
+      - key: N_PREGUNTAS_IA
+        value: "20"
+      - key: OPENAI_MODEL
+        value: "gpt-5"
+      - key: CLAVE_ACCESO
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SERPER_API_KEY
+        sync: false
