@@ -5,6 +5,8 @@ Herramienta del curso de Vertical AI. El cursillista escribe su web, su ciudad y
 1. **Búsqueda en Google**: en cuántas búsquedas sale su web y en qué puesto.
 2. **Pregunta a una IA**: en cuántas de 20 preguntas reales la IA recomienda su clínica.
 
+También compara el número real de reseñas de Google del cursillista con el de las clínicas que más salen, y cuenta qué motivos da la IA al recomendar.
+
 En cada vía muestra el ranking real, las búsquedas y respuestas literales de las que sale cada porcentaje, las tres que más salen, qué tienen sus webs que a la del cursillista le falta, y qué hacer (con instrucciones según la web esté hecha con WordPress, Wix u otro gestor). El informe se guarda en PDF desde el navegador.
 
 ## Archivos
@@ -80,6 +82,7 @@ Probado con datos reales (noviembre de 2026, Madrid; implantes, carillas y prót
 
 - El porcentaje de la IA varía entre dos análisis iguales (hasta unos 20 puntos con 20 preguntas). El orden entre clínicas es estable; la cifra exacta no.
 - Google: solo resultados orgánicos. No lee el bloque del mapa ni los anuncios, y el orden depende de la ubicación desde la que se consulta.
+- Reseñas de Google: se leen de la ficha que Google muestra al buscar «nombre + ciudad». Si muestra varias fichas (varias sedes) no se da cifra; si el nombre es ambiguo puede ser la ficha de otro negocio. En servidor se leen de Serper (sin probar).
 - Las señales de la web se detectan por código y palabras clave; pueden fallar con webs poco habituales. Las webs que se dibujan con JavaScript no se pueden leer y el informe lo indica.
 - A veces un directorio se cuela como si fuera una clínica entre las primeras de Google.
 - Los trabajos se guardan en memoria: se pierden al reiniciar y no sirven con más de una instancia.

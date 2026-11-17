@@ -15,6 +15,7 @@ import unicodedata
 import urllib.error
 import urllib.request
 import os
+import threading
 import shutil
 import subprocess
 import tempfile
@@ -722,16 +723,26 @@ def buscar_google(consulta, clave):
 GUION_SAFARI = os.path.join(os.path.dirname(os.path.abspath(__file__)), "google_safari.applescript")
 
 
-def buscar_google_safari(consulta):
-    """Busca en Google abriendo Safari en este Mac (como haría una persona) y lee el orden de los resultados.
-    Google oculta las direcciones completas, así que se devuelve la portada de cada web en su orden."""
+CERROJO_SAFARI = threading.Lock()
+
+
+def pagina_google_safari(consulta):
+    """Abre la búsqueda en Safari y devuelve (dirección final, código de la página). Una cada vez."""
     q = quote_plus(consulta)
     marca = f"q={q}&hl=es&gl=es&num=10"
-    p = subprocess.run(["osascript", GUION_SAFARI, "https://www.google.com/search?" + marca, marca],
-                       capture_output=True, text=True, timeout=40)
+    with CERROJO_SAFARI:
+        p = subprocess.run(["osascript", GUION_SAFARI, "https://www.google.com/search?" + marca, marca],
+                           capture_output=True, text=True, timeout=40)
     url, _, h = p.stdout.partition("\n")
     if "/sorry/" in url or "recaptcha" in h[:20000].lower() and "<h3" not in h:
         raise RuntimeError("captcha")
+    return url, h
+
+
+def buscar_google_safari(consulta):
+    """Busca en Google abriendo Safari en este Mac (como haría una persona) y lee el orden de los resultados.
+    Google oculta las direcciones completas, así que se devuelve la portada de cada web en su orden."""
+    _, h = pagina_google_safari(consulta)
     vistos = []
     for u in re.findall(r'<a jsname="UWckNb".{0,8000}?<cite[^>]*>(https?://[^<\s]+)', h, re.S):
         u = _html.unescape(u).rstrip("/") + "/"
@@ -740,11 +751,58 @@ def buscar_google_safari(consulta):
     return vistos
 
 
+def hay_safari():
+    return sys.platform == "darwin" and os.path.exists(GUION_SAFARI) and not os.environ.get("SIN_SAFARI")
+
+
+def resenas_google(nombre, ciudad):
+    """Nota y número de reseñas de la ficha que Google muestra al buscar «nombre ciudad». None si no se puede leer."""
+    consulta = f"{nombre} {ciudad}"
+    aentero = lambda x: int(re.sub(r"\D", "", x) or 0)
+    try:
+        if hay_safari():
+            _, h = pagina_google_safari(consulta)
+            t = re.sub(r"\s+", " ", _html.unescape(re.sub(r"<[^>]+>", " ", re.sub(r"<(script|style)\b.*?</\1>", " ", h, flags=re.S))))
+            m = re.search(r"(\d,\d)\s+([\d.]+)\s+reseñas\s+(?:Más información|de Google)", t)
+            if m:
+                return {"nota": m.group(1), "n": aentero(m.group(2)), "varias": False, "consulta": consulta}
+            # Si Google muestra varias fichas (varias sedes u otros negocios), no se puede saber cuál es: no se da cifra.
+        elif clave_google():
+            cuerpo = json.dumps({"q": consulta, "gl": "es", "hl": "es"}).encode()
+            req = urllib.request.Request("https://google.serper.dev/search", data=cuerpo, method="POST",
+                                         headers={"X-API-KEY": clave_google(), "Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=20) as r:
+                kg = json.loads(r.read().decode("utf-8", "replace")).get("knowledgeGraph", {})
+            if kg.get("rating") and kg.get("ratingCount"):
+                return {"nota": str(kg["rating"]).replace(".", ","), "n": int(kg["ratingCount"]), "varias": False, "consulta": consulta}
+    except Exception:
+        pass
+    return None
+
+
+MOTIVOS = [
+    ("Opiniones y valoraciones de pacientes", r"opini|rese[ñn]|valoraci|testimon|puntuaci"),
+    ("Formación y experiencia de los profesionales", r"formaci|m[aá]ster|especiali|experiencia|trayectoria|colegiad|universi|docen|acredit|board|equipo"),
+    ("Tecnología y planificación del tratamiento", r"digital|esc[aá]ner|3d|tecnolog|planificaci|guiada|mock|prueba"),
+    ("Precio y financiación", r"precio|financi|coste|presupuesto|€|económic"),
+    ("Casos y resultados publicados", r"casos|antes y despu|resultado|galer"),
+]
+
+
+def contar_motivos(respuestas):
+    """Cuenta qué razones da la IA en sus recomendaciones. Es una cuenta de palabras sobre sus propios textos."""
+    textos = [norm(x.get("motivo", "")) for r in respuestas for x in r["recomendadas"]]
+    total = len(textos)
+    filas = [{"motivo": nombre, "n": sum(1 for t in textos if re.search(norm(patron), t)), "total": total}
+             for nombre, patron in MOTIVOS]
+    return sorted((f for f in filas if f["n"]), key=lambda f: -f["n"])
+
+
 def buscar(consulta):
     """Devuelve (lista de URL, buscador usado). Google real con Safari; si no se puede, clave de Serper;
     y si tampoco, DuckDuckGo y Brave."""
     from urllib.parse import unquote, parse_qs
-    if sys.platform == "darwin" and os.path.exists(GUION_SAFARI) and not os.environ.get("SIN_SAFARI"):
+    if hay_safari():
         try:
             urls = buscar_google_safari(consulta)
             if urls:
@@ -1018,7 +1076,7 @@ def motor_ia():
 
 
 def capacidades():
-    safari = sys.platform == "darwin" and os.path.exists(GUION_SAFARI) and not os.environ.get("SIN_SAFARI")
+    safari = hay_safari()
     return {"ia": motor_ia()[0],
             "google": "Google desde Safari" if safari else "Google (servicio con clave)" if clave_google() else None,
             "preguntas": n_preguntas()}
@@ -1196,6 +1254,7 @@ def comparar(url, ciudad, tratamiento, negocio="clínica dental", modo="ambos"):
                           "posicion": (f"Te recomienda en {k} de {total} respuestas (mejor puesto: {min(puestos)}º)" if k
                                        else f"No te nombra en ninguna de las {total} respuestas"),
                           "veces": k, "total": total, "cands": cands, "fuentes": fuentes,
+                          "motivos": contar_motivos(resp),
                           "nombradas": [{"nombre": a["nombre"], "motivo": a["motivo"], "yo": a["yo"], "veces": a["veces"],
                                          "motores": a["motores"]} for a in orden_ia[:12]]}
             if not k:
@@ -1325,6 +1384,18 @@ def comparar(url, ciudad, tratamiento, negocio="clínica dental", modo="ambos"):
         else:
             vias["ia"]["consejo"] = None
     ex_consejo.shutdown(wait=False)
+    # Reseñas de Google reales: la propia clínica frente a las que más salen en cada vía.
+    nombres = list(dict.fromkeys([propia["nombre"]] + [x["nombre"] for v in vias.values() for x in v["primeras"]]))
+    fichas = {n: resenas_google(n, ciudad) for n in nombres} if (hay_safari() or clave_google()) else {}
+    for canal, v in vias.items():
+        filas = []
+        for n in [propia["nombre"]] + [x["nombre"] for x in v["primeras"]]:
+            f = fichas.get(n)
+            filas.append({"nombre": n, "yo": n == propia["nombre"], "nota": f["nota"] if f else None,
+                          "n": f["n"] if f else None, "varias": bool(f and f["varias"]),
+                          "consulta": f["consulta"] if f else f"{n} {ciudad}"})
+        v["resenas"] = sorted(filas, key=lambda f: -(f["n"] or -1)) if fichas else []
+        v.setdefault("motivos", [])
     for canal, v in vias.items():
         v["plan"] = plan_de_accion(propia, canal, v)
     propia.pop("pruebas")
@@ -1363,8 +1434,47 @@ def plan_de_accion(r, canal, v):
                           "texto": ", ".join(dict.fromkeys(f["host"] for f in fuera[:8]))
                                    + ". Son las fuentes reales de estas respuestas: conviene estar en ellas."})
     bloques.append({"plazo": "Fuera de tu web: lo que ha salido en este análisis", "items": datos})
-    general = [{"titulo": "Reseñas en Google de forma constante", "nota": "",
-                "texto": "Pedir reseña a cada paciente al terminar y responder a todas."}]
+    # --- Reseñas: lo que tiene que hacer la propia clínica ---
+    res = v.get("resenas", [])
+    mia = next((f for f in res if f["yo"]), None)
+    suyas = [f for f in res if not f["yo"] and f["n"] is not None]
+    if mia and mia["n"] is not None and suyas:
+        lista = ", ".join(f"{f['nombre']} {f['n']} ({f['nota']})" for f in suyas)
+        mayor = max(f["n"] for f in suyas)
+        if mia["n"] < mayor:
+            cabecera = (f"Tienes {mia['n']} reseñas en Google (nota {mia['nota']}). Las que más salen: {lista}. "
+                        f"Te faltan {mayor - mia['n']} para igualar a la que más tiene.")
+        else:
+            cabecera = (f"Tienes {mia['n']} reseñas en Google (nota {mia['nota']}), tantas o más que las que más salen: {lista}. "
+                        "Aquí no vas por detrás; mantén el ritmo.")
+    elif mia and mia["n"] is not None:
+        cabecera = f"Tienes {mia['n']} reseñas en Google (nota {mia['nota']}). No se han podido leer las de las demás para comparar."
+    elif suyas:
+        cabecera = ("No se ha podido leer tu ficha de Google al buscar tu nombre: comprueba que existe y que el nombre coincide con el de la web. "
+                    "Las que más salen tienen: " + ", ".join(f"{f['nombre']} {f['n']} ({f['nota']})" for f in suyas) + ".")
+    else:
+        cabecera = ""
+    motivo_op = next((m for m in v.get("motivos", []) if m["motivo"].startswith("Opiniones")), None)
+    if motivo_op:
+        cabecera += (f" En este análisis, la IA mencionó las opiniones de pacientes en {motivo_op['n']} de sus "
+                     f"{motivo_op['total']} recomendaciones.")
+    pasos = [
+        {"titulo": "Situación real", "texto": cabecera, "nota": ""} if cabecera else None,
+        {"titulo": "Consigue tu enlace directo de reseña", "nota": "",
+         "texto": "Entra en tu Perfil de Empresa de Google (busca el nombre de tu clínica con tu cuenta de Google) → «Pedir reseñas» → copia el enlace. "
+                  "Conviértelo en un código QR y ponlo en recepción y en la tarjeta de próxima cita."},
+        {"titulo": "Pídela en el momento adecuado", "nota": "",
+         "texto": "Al terminar un tratamiento con buen resultado, en persona. Ese mismo día, envía el enlace por WhatsApp o correo. "
+                  "Nombra a una persona del equipo como responsable de pedirla."},
+        {"titulo": "Anima a que cuenten qué tratamiento se hicieron", "nota": "",
+         "texto": f"Una reseña que dice «me puse {trat} y…» describe lo que haces mejor que una que solo dice «muy bien»."},
+        {"titulo": "Responde a todas, también a las negativas", "nota": "",
+         "texto": "Con educación, sin datos clínicos del paciente y ofreciendo hablarlo en la clínica."},
+        {"titulo": "No compres reseñas ni las cambies por descuentos", "nota": "",
+         "texto": "Las normas de Google lo prohíben: puede retirarlas y sancionar la ficha."}]
+    bloques.append({"plazo": "Reseñas: esto solo lo puedes hacer tú (los pasos son práctica habitual, no salen de este análisis)",
+                    "items": [p for p in pasos if p]})
+    general = []
     if canal == "ia":
         general += [
             {"titulo": "Perfiles en Doctoralia y Top Doctors", "nota": "",
@@ -1382,7 +1492,7 @@ def plan_de_accion(r, canal, v):
              "texto": "Colegio profesional, sociedades científicas, proveedores y prensa local."},
             {"titulo": "Dar de alta la web en Google Search Console", "nota": "",
              "texto": "Es gratis y enseña la posición real en Google para cada búsqueda, mes a mes."}]
-    bloques.append({"plazo": "Prácticas generales de posicionamiento (no salen de este análisis)", "items": general})
+    bloques.append({"plazo": "Otras cosas que solo puedes hacer tú (prácticas generales, no salen de este análisis)", "items": general})
     bloques.append({"plazo": "Opcional: no lo tiene ninguna de las primeras, así que este análisis no demuestra que ayude",
                     "items": sin})
     return bloques

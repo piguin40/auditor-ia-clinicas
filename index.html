@@ -163,6 +163,25 @@ function pintarVia(v, idx, r) {
     s.append(el("div", {class: "card"}, el("table", {}, el("thead", {}, el("tr", {}, el("th", {}, "Clínica"), el("th", {}, `${v.unidad} en las que sale`))), tb)));
   }
 
+  if (v.resenas && v.resenas.length) {
+    s.append(el("h3", {}, "Reseñas en Google: tú frente a las que más salen"));
+    const tb = el("tbody");
+    v.resenas.forEach(f => tb.append(el("tr", {class: f.yo ? "yo" : ""},
+      el("td", {}, el("b", {}, f.nombre + (f.yo ? " (tu clínica)" : "")), f.varias ? el("div", {class: "meta"}, "Tiene varias fichas; se muestra la que más reseñas tiene") : null),
+      el("td", {}, f.n === null ? el("span", {class: "meta"}, "No se ha podido leer (Google muestra varias fichas o ninguna para ese nombre)") : el("b", {}, `${f.n} reseñas`)),
+      el("td", {}, f.nota === null ? "" : `Nota ${f.nota}`))));
+    s.append(el("div", {class: "card"}, el("table", {}, el("thead", {}, el("tr", {}, el("th", {}, "Clínica"), el("th", {}, "Reseñas"), el("th", {}, "Nota"))), tb),
+      el("p", {class: "meta", style: "margin-bottom:0"}, "Datos de la ficha que Google muestra al buscar el nombre de cada clínica y la ciudad. Si el nombre es ambiguo puede ser la ficha de otro negocio: compruébalo buscándolo tú.")));
+  }
+  if (v.motivos && v.motivos.length) {
+    s.append(el("h3", {}, "Por qué recomienda la IA a las que recomienda"));
+    const tb = el("tbody");
+    v.motivos.forEach(m => { const pc = Math.round(100 * m.n / m.total); const bar = el("i"); bar.style.width = pc + "%"; bar.style.background = "var(--muted)";
+      tb.append(el("tr", {}, el("td", {}, m.motivo), el("td", {class: "cuanto"}, el("b", {}, `${m.n} de ${m.total}`), ` · ${pc} %`, el("div", {class: "barra"}, bar)))); });
+    s.append(el("div", {class: "card"}, el("table", {}, el("thead", {}, el("tr", {}, el("th", {}, "Motivo que menciona"), el("th", {}, "Recomendaciones"))), tb),
+      el("p", {class: "meta", style: "margin-bottom:0"}, "Cuenta de palabras sobre los motivos que la propia IA escribió en este análisis. Una recomendación puede mencionar varios motivos.")));
+  }
+
   if (v.pruebas_reales && v.pruebas_reales.length) {
     const d = el("details", {class: "card", style: "margin-top:16px;border:1px solid var(--line)"},
       el("summary", {}, `De dónde sale el porcentaje: las ${v.pruebas_reales.length} ${v.unidad} tal cual`));
